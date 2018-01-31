@@ -1,6 +1,7 @@
 package com.hz.android.imageselector.library;
 
 import android.content.Context;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.support.v7.widget.RecyclerView.ViewHolder;
 import android.view.View;
@@ -22,7 +23,7 @@ public class ImageAdapter extends EasyAdapter<ImageAdapter.ImageViewHolder> {
 
     private List<String> sourceList;
     private Context context;
-
+    private Drawable selectedIcon = null;
 
     public ImageAdapter(Context context, List<String> sourceList) {
         this.sourceList = new ArrayList<>(sourceList);
@@ -33,7 +34,6 @@ public class ImageAdapter extends EasyAdapter<ImageAdapter.ImageViewHolder> {
         this.sourceList = new ArrayList<>(list);
         notifyDataSetChanged();
     }
-
 
     @Override
     public ImageViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -50,12 +50,14 @@ public class ImageAdapter extends EasyAdapter<ImageAdapter.ImageViewHolder> {
         Picasso.with(context).load(imageUri).into(holder.sourceImage);
 
         if (isSelected(position)) {
+            if (selectedIcon != null) {
+                holder.selectedImage.setImageDrawable(selectedIcon);
+            }
             holder.selectedImage.setVisibility(View.VISIBLE);
         } else {
             holder.selectedImage.setVisibility(View.GONE);
         }
     }
-
 
 
     public List<String> getSourceList() {
@@ -78,6 +80,19 @@ public class ImageAdapter extends EasyAdapter<ImageAdapter.ImageViewHolder> {
         clearSelected();
     }
 
+    public Drawable getSelectedIcon() {
+        return selectedIcon;
+    }
+
+    public void setSelectedIcon(Drawable selectedIcon) {
+        this.selectedIcon = selectedIcon;
+        notifyDataSetChanged();
+    }
+
+    public Context getContext() {
+        return context;
+    }
+
     @Override
 
     public int getItemCount() {
@@ -93,6 +108,11 @@ public class ImageAdapter extends EasyAdapter<ImageAdapter.ImageViewHolder> {
             sourceImage = (ImageView) itemView.findViewById(R.id.source_image_view);
             selectedImage = (ImageView) itemView.findViewById(R.id.select_image_view);
         }
+    }
+
+    public static int dp2px(Context context, float dipValue) {
+        final float scale = context.getResources().getDisplayMetrics().density;
+        return (int) (dipValue * scale + 0.5f);
     }
 
 }

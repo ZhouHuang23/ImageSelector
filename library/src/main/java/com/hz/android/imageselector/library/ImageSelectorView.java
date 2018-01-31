@@ -3,11 +3,14 @@ package com.hz.android.imageselector.library;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.provider.MediaStore;
+import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
+import android.widget.FrameLayout;
 
 import com.hz.android.easyadapter.EasyAdapter;
 
@@ -17,23 +20,26 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
+ * 使用组合view方法，自定义图片选择器View
  * Created by Administrator on 2018/1/24.
  */
 
-public class ImageSelectorView extends RecyclerView {
-    //数据
+public class ImageSelectorView extends FrameLayout {
     private List<String> imagePathList;
-    //适配器
     private ImageAdapter imageAdapter;
 
-    //一次读取最大数量
-    private static final int MAX_READ_COUNT = 18;
-    //标记cursor位置
-    private int markedCursorPosition = 0;
+    private static final int MAX_READ_COUNT = 18; //一次读取最大数量
 
-    //控制子线程状态
+    private int markedCursorPosition = 0; //标记cursor位置
+    //标记子线程状态
     private boolean isImageReading = false;
     private boolean isImageReadCompleted = false;
+
+    private int itemColumnCount = 3;//默认展示的列数
+
+    private int itemSpace = 5;//默认item的间隔（单位：dp）
+
+    private boolean itemIncludeEdge = false; //默认不包含边缘
 
     private OnImageSelectedListener onImageSelectedListener;
 
@@ -47,15 +53,25 @@ public class ImageSelectorView extends RecyclerView {
         this(context, attrs, 0);
     }
 
+    private RecyclerView recyclerView;
+    private GridSpacingItemDecoration itemDecoration;
+
     public ImageSelectorView(final Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
+
+        recyclerView = new RecyclerView(getContext());
+        addView(recyclerView);
+
+        //设置RecyclerView
+        recyclerView.setLayoutManager(new GridLayoutManager(getContext(), itemColumnCount)); // 设置图片展的列数
+        itemDecoration = new GridSpacingItemDecoration(itemColumnCount, dp2px(getContext(), itemSpace), itemIncludeEdge);
+        recyclerView.addItemDecoration(itemDecoration); //设置recycleView中item的间隔、是否包含边缘
+
         imagePathList = new ArrayList<>();
         selectedImageUriList = new ArrayList<>();
 
         //初始化imageAdapter
         imageAdapter = new ImageAdapter(context, imagePathList);
-
 
         imageAdapter.setSelectMode(EasyAdapter.SelectMode.MULTI_SELECT);
         imageAdapter.setOnItemMultiSelectListener(new EasyAdapter.OnItemMultiSelectListener() {
@@ -88,22 +104,22 @@ public class ImageSelectorView extends RecyclerView {
                         selectedImageUriList.add(Uri.fromFile(new File(imageAdapter.getSourceList().get(position))));
                     }
                 } else if (operation == EasyAdapter.Operation.SET_MAX_COUNT) {
-                    if (imageAdapter.getMultiSelectedPosition().isEmpty()){ //内部已经清空
+                    if (imageAdapter.getMultiSelectedPosition().isEmpty()) { //内部已经清空
                         selectedImageUriList.clear();
                     }
                 }
                 if (onImageSelectedListener != null) {
-                    onImageSelectedListener.onImageSelectedCount(selectedImageUriList.size());
+                    onImageSelectedListener.onImageSelectedCount(selectedImageUriList.size());//通知改变
                 }
 
             }
         });
 
-        ImageSelectorView.this.setAdapter(imageAdapter);
+        recyclerView.setAdapter(imageAdapter);
 
         readSystemImageData();
 
-        this.setOnScrollListener(new OnScrollListener() {
+        recyclerView.setOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                 super.onScrollStateChanged(recyclerView, newState);
@@ -112,7 +128,7 @@ public class ImageSelectorView extends RecyclerView {
             @Override
             public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
-                if (isSlideToBottom(ImageSelectorView.this) && !isImageReadCompleted && !isImageReading) {
+                if (isSlideToBottom(recyclerView) && !isImageReadCompleted && !isImageReading) {
                     readSystemImageData();
                 }
             }
@@ -121,7 +137,6 @@ public class ImageSelectorView extends RecyclerView {
     }
 
     //访问数据库 读取数据进list
-
     private synchronized void readSystemImageData() {
         if (isImageReading || isImageReadCompleted) {
             return;
@@ -135,12 +150,11 @@ public class ImageSelectorView extends RecyclerView {
                 Uri imageUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
                 ContentResolver contentResolver = getContext().getContentResolver();
                 // 只查询jpeg和png的图片
-                Cursor cursor = contentResolver.query(imageUri, null,// 查找这个mImageUri资源路径下的资源
+                Cursor cursor = contentResolver.query(imageUri, null,// 查找这个imageUri资源路径下的资源
                         MediaStore.Images.Media.MIME_TYPE + "=? or "
                                 + MediaStore.Images.Media.MIME_TYPE + "=?",
                         new String[]{"image/jpeg", "image/png"},
                         MediaStore.Images.Media.DATE_MODIFIED + " DESC");
-
 
                 int imageDataIndex;
                 String imageDataPath;
@@ -183,6 +197,70 @@ public class ImageSelectorView extends RecyclerView {
     }
 
     //========API=========
+
+    /**
+     * 设置展示列数
+     *
+     * @param itemColumnCount
+     */
+    public void setItemColumnCount(int itemColumnCount) {
+        this.itemColumnCount = itemColumnCount;
+        // 重新设置布局
+        recyclerView.setLayoutManager(new GridLayoutManager(getContext(), itemColumnCount));
+        recyclerView.removeItemDecoration(itemDecoration);
+        itemDecoration = new GridSpacingItemDecoration(itemColumnCount, dp2px(getContext(), itemSpace), itemIncludeEdge);
+        recyclerView.addItemDecoration(itemDecoration);
+
+    }
+
+    /**
+     * 获取列数
+     *
+     * @return
+     */
+    public int getItemColumnCount() {
+        return itemColumnCount;
+    }
+
+    /**
+     * 设置Item间隙
+     * @param itemSpace
+     */
+    public void setItemSpace(int itemSpace) {
+        this.itemSpace = itemSpace;
+        recyclerView.removeItemDecoration(itemDecoration);
+        itemDecoration = new GridSpacingItemDecoration(itemColumnCount, dp2px(getContext(), itemSpace), itemIncludeEdge);
+        recyclerView.addItemDecoration(itemDecoration);
+
+    }
+    /**
+     * 获取item间隙
+     *
+     * @return
+     */
+    public int getItemSpace() {
+        return itemSpace;
+    }
+
+
+    /**
+     * 获取item是否包含边界
+     * @return
+     */
+    public boolean isItemIncludeEdge() {
+        return itemIncludeEdge;
+    }
+
+    /**
+     * 设置Item是否包含边界
+     * @param itemIncludeEdge
+     */
+    public void setItemIncludeEdge(boolean itemIncludeEdge) {
+        this.itemIncludeEdge = itemIncludeEdge;
+        recyclerView.removeItemDecoration(itemDecoration);
+        itemDecoration = new GridSpacingItemDecoration(itemColumnCount, dp2px(getContext(), itemSpace), itemIncludeEdge);
+        recyclerView.addItemDecoration(itemDecoration);
+    }
 
     /**
      * 获取选择的图片数目
@@ -243,7 +321,7 @@ public class ImageSelectorView extends RecyclerView {
     }
 
     /**
-     * 设置最大可选
+     * 设置最大可选数目
      *
      * @param count 数目
      */
@@ -251,6 +329,23 @@ public class ImageSelectorView extends RecyclerView {
         imageAdapter.setMaxSelectedCount(count);
     }
 
+    /**
+     * 设置选中图片后的标记icon
+     *
+     * @param selectedIcon
+     */
+    public void setSelectedIcon(Drawable selectedIcon) {
+        imageAdapter.setSelectedIcon(selectedIcon);
+    }
+
+    /**
+     * 获取选中图片的标记icon
+     *
+     * @return
+     */
+    public Drawable getSelectedIcon() {
+        return imageAdapter.getSelectedIcon();
+    }
 
     /**
      * 设置图片选择监听器
@@ -273,6 +368,7 @@ public class ImageSelectorView extends RecyclerView {
         void onImageSelectedCount(int count);
     }
 
+
     /**
      * 判断recycleView是否滑动到底部
      *
@@ -293,6 +389,18 @@ public class ImageSelectorView extends RecyclerView {
         } else {
             return false;
         }
+    }
+
+    /**
+     * 工具，dp转换成px
+     *
+     * @param context
+     * @param dipValue
+     * @return
+     */
+    public static int dp2px(Context context, float dipValue) {
+        final float scale = context.getResources().getDisplayMetrics().density;
+        return (int) (dipValue * scale + 0.5f);
     }
 
 }

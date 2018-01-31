@@ -28,11 +28,18 @@ public class ImageAdapter extends EasyAdapter<ImageAdapter.ImageViewHolder> {
     public ImageAdapter(Context context, List<String> sourceList) {
         this.sourceList = new ArrayList<>(sourceList);
         this.context = context;
+        setHasStableIds(true); // 解决刷新 闪烁问题
     }
 
     public void updateImagePathList(List<String> list) {
-        this.sourceList = new ArrayList<>(list);
+        sourceList = new ArrayList<>(list);
         notifyDataSetChanged();
+    }
+
+    @Override
+    public long getItemId(int position) { //固定每个位置的itemID
+        //return super.getItemId(position);
+        return position;
     }
 
     @Override
@@ -42,12 +49,23 @@ public class ImageAdapter extends EasyAdapter<ImageAdapter.ImageViewHolder> {
     }
 
     @Override
-    public void whenBindViewHolder(ImageViewHolder holder, int position) {
+    public void whenBindViewHolder(final ImageViewHolder holder, int position) {
         holder.sourceImage.setTag(position);
         holder.selectedImage.setTag(position);
-        Uri imageUri = Uri.fromFile(new File(sourceList.get(position)));
-        //holder.sourceImage.setImageURI(imageUri); // picasso
-        Picasso.with(context).load(imageUri).into(holder.sourceImage);
+        final Uri imageUri = Uri.fromFile(new File(sourceList.get(position)));
+        final Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                int width = holder.sourceImage.getWidth();
+                Picasso.with(context).load(imageUri).resize(width, width).centerCrop().into(holder.sourceImage);
+            }
+        };
+
+        if (holder.sourceImage.getWidth() > 0) {  //尺寸已确定，直接加载图片
+            task.run();
+        } else {
+            holder.sourceImage.post(task);
+        }
 
         if (isSelected(position)) {
             if (selectedIcon != null) {

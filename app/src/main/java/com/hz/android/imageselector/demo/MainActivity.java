@@ -24,7 +24,7 @@ public class MainActivity extends AppCompatActivity {
         btnEnter = (Button) findViewById(R.id.btn_enter);
 
         //设置
-        imageSelectorView.setItemColumnCount(5);
+        imageSelectorView.setItemColumnCount(3);
         imageSelectorView.setItemSpace(10);
         imageSelectorView.setItemIncludeEdge(true);
         imageSelectorView.setSelectedIcon(getResources().getDrawable(R.drawable.selected_icon));//设置选中图片后的标记

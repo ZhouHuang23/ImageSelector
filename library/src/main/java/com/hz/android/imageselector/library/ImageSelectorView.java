@@ -224,6 +224,7 @@ public class ImageSelectorView extends FrameLayout {
 
     /**
      * 设置Item间隙
+     *
      * @param itemSpace
      */
     public void setItemSpace(int itemSpace) {
@@ -233,6 +234,7 @@ public class ImageSelectorView extends FrameLayout {
         recyclerView.addItemDecoration(itemDecoration);
 
     }
+
     /**
      * 获取item间隙
      *
@@ -245,6 +247,7 @@ public class ImageSelectorView extends FrameLayout {
 
     /**
      * 获取item是否包含边界
+     *
      * @return
      */
     public boolean isItemIncludeEdge() {
@@ -253,6 +256,7 @@ public class ImageSelectorView extends FrameLayout {
 
     /**
      * 设置Item是否包含边界
+     *
      * @param itemIncludeEdge
      */
     public void setItemIncludeEdge(boolean itemIncludeEdge) {
